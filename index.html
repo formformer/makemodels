@@ -76,6 +76,12 @@
         .retry-btn:hover {
             background-color: #0055aa;
         }
+        .alternative-data {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff8e1;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -86,17 +92,47 @@
         document.addEventListener('DOMContentLoaded', function() {
             const makesContainer = document.getElementById('makes-container');
             
-            // Function to fetch with CORS proxy
-            function fetchWithProxy(url) {
-                // Using a public CORS proxy
-                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                return fetch(proxyUrl + url, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+            // Sample data fallback
+            const sampleData = {
+                "makes": [
+                    { "id": "audi", "name": "Audi" },
+                    { "id": "bmw", "name": "BMW" },
+                    { "id": "mercedes", "name": "Mercedes-Benz" }
+                ],
+                "models": {
+                    "audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "TT", "R8"],
+                    "bmw": ["1 Series", "2 Series", "3 Series", "4 Series", "5 Series", "6 Series", "7 Series", "8 Series", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "i3", "i8"],
+                    "mercedes": ["A-Class", "B-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLF", "GLS", "G-Class", "SL", "SLC", "AMG GT"]
+                }
+            };
+
+            function showSampleData() {
+                makesContainer.innerHTML = `
+                    <div class="alternative-data">
+                        <h3>Note: Couldn't connect to mobile.de API</h3>
+                        <p>Showing sample data instead. The actual API might require authentication or be temporarily unavailable.</p>
+                    </div>
+                `;
+                
+                sampleData.makes.forEach(make => {
+                    const makeDiv = document.createElement('div');
+                    makeDiv.className = 'make-container';
+                    makeDiv.innerHTML = `
+                        <div class="make-name">${make.name}</div>
+                        <div class="models-list" id="models-${make.id}"></div>
+                    `;
+                    makesContainer.appendChild(makeDiv);
+                    
+                    const modelsList = document.getElementById(`models-${make.id}`);
+                    sampleData.models[make.id].forEach(model => {
+                        const modelItem = document.createElement('div');
+                        modelItem.className = 'model-item';
+                        modelItem.textContent = model;
+                        modelsList.appendChild(modelItem);
+                    });
                 });
             }
-            
+
             function loadData() {
                 // Show loading spinner
                 makesContainer.innerHTML = `
@@ -106,119 +142,88 @@
                     </div>
                 `;
                 
-                // First fetch all makes
-                fetchWithProxy('https://services.mobile.de/refdata/classes/Car/makes')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(makes => {
-                        makesContainer.innerHTML = '';
-                        
-                        // For each make, fetch its models
-                        makes.forEach(make => {
-                            const makeDiv = document.createElement('div');
-                            makeDiv.className = 'make-container';
-                            makeDiv.innerHTML = `
-                                <div class="make-name">${make.name}</div>
-                                <div class="loading">
-                                    <div class="spinner"></div>
-                                    <p>Loading models...</p>
-                                </div>
-                                <div class="models-list" id="models-${make.id}"></div>
-                            `;
-                            makesContainer.appendChild(makeDiv);
-                            
-                            // Fetch models for this make
-                            fetchWithProxy(`https://services.mobile.de/refdata/classes/Car/makes/${make.id}/models`)
-                                .then(response => {
-                                    if (!response.ok) {
-                                        throw new Error(`Failed to fetch models for ${make.name}`);
-                                    }
-                                    return response.json();
-                                })
-                                .then(models => {
-                                    const modelsList = document.getElementById(`models-${make.id}`);
-                                    modelsList.previousElementSibling.remove(); // Remove loading spinner
-                                    
-                                    if (models.length === 0) {
-                                        modelsList.innerHTML = '<div>No models found</div>';
-                                        return;
-                                    }
-                                    
-                                    models.forEach(model => {
-                                        const modelItem = document.createElement('div');
-                                        modelItem.className = 'model-item';
-                                        modelItem.textContent = model.name;
-                                        modelsList.appendChild(modelItem);
-                                    });
-                                })
-                                .catch(error => {
-                                    const modelsList = document.getElementById(`models-${make.id}`);
-                                    modelsList.previousElementSibling.remove(); // Remove loading spinner
-                                    modelsList.innerHTML = `
-                                        <div class="error">Error loading models: ${error.message}</div>
-                                        <button class="retry-btn" onclick="retryModelFetch('${make.id}', '${make.name}')">Retry</button>
-                                    `;
-                                });
-                        });
-                    })
-                    .catch(error => {
-                        makesContainer.innerHTML = `
-                            <div class="error">
-                                <p>Error loading car makes: ${error.message}</p>
-                                <p>This might be due to CORS restrictions. Try:</p>
-                                <ul>
-                                    <li>Using a browser extension to disable CORS</li>
-                                    <li>Running this page through a local server</li>
-                                </ul>
-                                <button class="retry-btn" onclick="loadData()">Retry</button>
+                // Try to fetch from mobile.de API
+                fetch('https://services.mobile.de/refdata/classes/Car/makes', {
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(makes => {
+                    makesContainer.innerHTML = '';
+                    
+                    makes.forEach(make => {
+                        const makeDiv = document.createElement('div');
+                        makeDiv.className = 'make-container';
+                        makeDiv.innerHTML = `
+                            <div class="make-name">${make.name}</div>
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>Loading models...</p>
                             </div>
+                            <div class="models-list" id="models-${make.id}"></div>
                         `;
-                    });
-            }
-            
-            // Global function for retrying model fetch
-            window.retryModelFetch = function(makeId, makeName) {
-                const modelsList = document.getElementById(`models-${makeId}`);
-                modelsList.innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading models...</p>
-                    </div>
-                `;
-                
-                fetchWithProxy(`https://services.mobile.de/refdata/classes/Car/makes/${makeId}/models`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Failed to fetch models for ${makeName}`);
-                        }
-                        return response.json();
-                    })
-                    .then(models => {
-                        modelsList.innerHTML = '';
+                        makesContainer.appendChild(makeDiv);
                         
-                        if (models.length === 0) {
-                            modelsList.innerHTML = '<div>No models found</div>';
-                            return;
-                        }
-                        
-                        models.forEach(model => {
-                            const modelItem = document.createElement('div');
-                            modelItem.className = 'model-item';
-                            modelItem.textContent = model.name;
-                            modelsList.appendChild(modelItem);
+                        fetch(`https://services.mobile.de/refdata/classes/Car/makes/${make.id}/models`, {
+                            mode: 'cors',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Failed to fetch models for ${make.name}`);
+                            }
+                            return response.json();
+                        })
+                        .then(models => {
+                            const modelsList = document.getElementById(`models-${make.id}`);
+                            modelsList.previousElementSibling.remove();
+                            
+                            if (models.length === 0) {
+                                modelsList.innerHTML = '<div>No models found</div>';
+                                return;
+                            }
+                            
+                            models.forEach(model => {
+                                const modelItem = document.createElement('div');
+                                modelItem.className = 'model-item';
+                                modelItem.textContent = model.name;
+                                modelsList.appendChild(modelItem);
+                            });
+                        })
+                        .catch(modelError => {
+                            const modelsList = document.getElementById(`models-${make.id}`);
+                            modelsList.previousElementSibling.remove();
+                            modelsList.innerHTML = `
+                                <div class="error">Couldn't load models: ${modelError.message}</div>
+                                <p>Showing sample models instead</p>
+                            `;
+                            
+                            // Show sample models if available
+                            if (sampleData.models[make.id]) {
+                                sampleData.models[make.id].forEach(model => {
+                                    const modelItem = document.createElement('div');
+                                    modelItem.className = 'model-item';
+                                    modelItem.textContent = model;
+                                    modelsList.appendChild(modelItem);
+                                });
+                            }
                         });
-                    })
-                    .catch(error => {
-                        modelsList.innerHTML = `
-                            <div class="error">Error loading models: ${error.message}</div>
-                            <button class="retry-btn" onclick="retryModelFetch('${makeId}', '${makeName}')">Retry</button>
-                        `;
                     });
-            };
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showSampleData();
+                });
+            }
             
             // Initial load
             loadData();
