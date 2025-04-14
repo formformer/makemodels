@@ -1,233 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Makes and Models</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .make-container {
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            background-color: #f9f9f9;
-        }
-        .make-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #0066cc;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #ddd;
-        }
-        .models-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .model-item {
-            background-color: #e6f2ff;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 14px;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #666;
-        }
-        .error {
-            color: #cc0000;
-            font-weight: bold;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #09f;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .retry-btn {
-            background-color: #0066cc;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .retry-btn:hover {
-            background-color: #0055aa;
-        }
-        .alternative-data {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #fff8e1;
-            border-radius: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>All Car Models XMLs</title>
 </head>
 <body>
-    <h1>Car Makes and Models</h1>
-    <div id="makes-container"></div>
+  <h1>Car Models Data</h1>
+  <div id="xml-container"></div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const makesContainer = document.getElementById('makes-container');
-            
-            // Sample data fallback
-            const sampleData = {
-                "makes": [
-                    { "id": "audi", "name": "Audi" },
-                    { "id": "bmw", "name": "BMW" },
-                    { "id": "mercedes", "name": "Mercedes-Benz" }
-                ],
-                "models": {
-                    "audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "TT", "R8"],
-                    "bmw": ["1 Series", "2 Series", "3 Series", "4 Series", "5 Series", "6 Series", "7 Series", "8 Series", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "i3", "i8"],
-                    "mercedes": ["A-Class", "B-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLF", "GLS", "G-Class", "SL", "SLC", "AMG GT"]
-                }
-            };
+  <script>
+    const urls = [
+      "https://services.mobile.de/refdata/classes/Car/makes/ABARTH/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/AC/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ACURA/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/AIWAYS/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/AIXAM/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ALFA ROMEO/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ALPINA/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ALPINE/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ALVIS/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ARIEL/models",
+      "https://services.mobile.de/refdata/classes/Car/makes/ARTEGA/models",
+      
+    ];
 
-            function showSampleData() {
-                makesContainer.innerHTML = `
-                    <div class="alternative-data">
-                        <h3>Note: Couldn't connect to mobile.de API</h3>
-                        <p>Showing sample data instead. The actual API might require authentication or be temporarily unavailable.</p>
-                    </div>
-                `;
-                
-                sampleData.makes.forEach(make => {
-                    const makeDiv = document.createElement('div');
-                    makeDiv.className = 'make-container';
-                    makeDiv.innerHTML = `
-                        <div class="make-name">${make.name}</div>
-                        <div class="models-list" id="models-${make.id}"></div>
-                    `;
-                    makesContainer.appendChild(makeDiv);
-                    
-                    const modelsList = document.getElementById(`models-${make.id}`);
-                    sampleData.models[make.id].forEach(model => {
-                        const modelItem = document.createElement('div');
-                        modelItem.className = 'model-item';
-                        modelItem.textContent = model;
-                        modelsList.appendChild(modelItem);
-                    });
-                });
-            }
+    const container = document.getElementById('xml-container');
 
-            function loadData() {
-                // Show loading spinner
-                makesContainer.innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading car makes...</p>
-                    </div>
-                `;
-                
-                // Try to fetch from mobile.de API
-                fetch('https://services.mobile.de/refdata/classes/Car/makes', {
-                    mode: 'cors',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(makes => {
-                    makesContainer.innerHTML = '';
-                    
-                    makes.forEach(make => {
-                        const makeDiv = document.createElement('div');
-                        makeDiv.className = 'make-container';
-                        makeDiv.innerHTML = `
-                            <div class="make-name">${make.name}</div>
-                            <div class="loading">
-                                <div class="spinner"></div>
-                                <p>Loading models...</p>
-                            </div>
-                            <div class="models-list" id="models-${make.id}"></div>
-                        `;
-                        makesContainer.appendChild(makeDiv);
-                        
-                        fetch(`https://services.mobile.de/refdata/classes/Car/makes/${make.id}/models`, {
-                            mode: 'cors',
-                            headers: {
-                                'Accept': 'application/json'
-                            }
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`Failed to fetch models for ${make.name}`);
-                            }
-                            return response.json();
-                        })
-                        .then(models => {
-                            const modelsList = document.getElementById(`models-${make.id}`);
-                            modelsList.previousElementSibling.remove();
-                            
-                            if (models.length === 0) {
-                                modelsList.innerHTML = '<div>No models found</div>';
-                                return;
-                            }
-                            
-                            models.forEach(model => {
-                                const modelItem = document.createElement('div');
-                                modelItem.className = 'model-item';
-                                modelItem.textContent = model.name;
-                                modelsList.appendChild(modelItem);
-                            });
-                        })
-                        .catch(modelError => {
-                            const modelsList = document.getElementById(`models-${make.id}`);
-                            modelsList.previousElementSibling.remove();
-                            modelsList.innerHTML = `
-                                <div class="error">Couldn't load models: ${modelError.message}</div>
-                                <p>Showing sample models instead</p>
-                            `;
-                            
-                            // Show sample models if available
-                            if (sampleData.models[make.id]) {
-                                sampleData.models[make.id].forEach(model => {
-                                    const modelItem = document.createElement('div');
-                                    modelItem.className = 'model-item';
-                                    modelItem.textContent = model;
-                                    modelsList.appendChild(modelItem);
-                                });
-                            }
-                        });
-                    });
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showSampleData();
-                });
-            }
-            
-            // Initial load
-            loadData();
-        });
-    </script>
+    async function fetchAndDisplayXML(url) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const text = await response.text();
+        const pre = document.createElement('pre');
+        pre.textContent = text;
+        container.appendChild(pre);
+      } catch (error) {
+        console.error('Error fetching:', url, error);
+      }
+    }
+
+    urls.forEach(url => {
+      fetchAndDisplayXML(url);
+    });
+  </script>
 </body>
 </html>
